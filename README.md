@@ -21,15 +21,6 @@ Esse controle permite que a concessionária tenha uma visão clara e precisa de 
 
 ---
 
-## Estrutura do Projeto
-
-Na pasta `Documentação`, você encontrará:
-
-- A descrição detalhada e narrativa do sistema (`README.md`)  
-- O diagrama ER que representa as entidades e seus relacionamentos no sistema (`diagrama_ER.png`)  
-
----
-
 ## Como utilizar
 
 1. Clone o repositório:  
