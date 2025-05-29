@@ -34,7 +34,7 @@ O sistema atende tanto clientes Pessoa Física quanto Pessoa Jurídica, armazena
 ## Colaboradores
 
 - **Luiz Felipe**  
-  GitHub: [https://github.com/Luiz-06](COLE_AQUI_O_LINK)
+  GitHub: [Link do GitHub](https://github.com/Luiz-06)
 
 - **Pedro Vitor**  
-  GitHub: [https://github.com/PedroVenanci0](COLE_AQUI_O_LINK)
+  GitHub: [Link do GitHub](https://github.com/PedroVenanci0)
