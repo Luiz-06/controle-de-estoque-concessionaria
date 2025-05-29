@@ -10,9 +10,9 @@ CREATE TABLE FUNCIONARIO (
 
 -- Inserção de dados na tabela FUNCIONARIO
 INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MENSAL, QTD_VENDIDA_NO_MES) VALUES
-(1, 'Carlos Alberto Silva', '1985-03-15', 3500.00, 10000.00, 7500.00),
-(2, 'Beatriz Ferreira Souza', '1992-07-20', 2800.00, 8000.00, 8200.00),
-(3, 'Ricardo Lima Azevedo', '1978-11-05', 4200.00, 12000.00, 11500.00);
+(1, 'Carlos Alberto Silva', '1985-03-15', 3500.00, 10000.00, 0),
+(2, 'Beatriz Ferreira Souza', '1992-07-20', 2800.00, 8000.00, 0),
+(3, 'Ricardo Lima Azevedo', '1978-11-05', 4200.00, 12000.00, 0);
 
 -- Tabela de Clientes (referenciada por VENDA)
 CREATE TABLE CLIENTE (
@@ -24,12 +24,12 @@ CREATE TABLE CLIENTE (
 
 -- Inserção de dados na tabela CLIENTE
 INSERT INTO CLIENTE (COD_CLIENTE, NOME, DT_NASCIMENTO, QTD_GASTO) VALUES
-(1, 'Fernanda Moreira Costa', '1990-01-25', 1250.75),
-(2, 'Lucas Dias Martins', '1988-06-10', 850.00),
-(3, 'Juliana Pereira Alves', '2000-09-30', 2100.50),
-(4, 'TecnoSoluções Avançadas Ltda', '2010-04-12', 15780.90),
-(5, 'Comércio Varejista XYZ EIRELI', '2015-08-01', 22300.00),
-(6, 'Serviços Gerais Alfa & Filhos S.A.', '2005-11-20', 8950.40);
+(1, 'Fernanda Moreira Costa', '1990-01-25', 0),
+(2, 'Lucas Dias Martins', '1988-06-10', 0),
+(3, 'Juliana Pereira Alves', '2000-09-30', 0),
+(4, 'TecnoSoluções Avançadas Ltda', '2010-04-12', 0),
+(5, 'Comércio Varejista XYZ EIRELI', '2015-08-01', 0),
+(6, 'Serviços Gerais Alfa & Filhos S.A.', '2005-11-20', 0);
 
 -- Pessoa Física (referência a CLIENTE)
 CREATE TABLE PESSOA_FISICA (
@@ -153,8 +153,13 @@ CREATE TABLE LOJA_CARRO (
 	FOREIGN KEY (COD_CARRO) REFERENCES CARRO(COD_CARRO)
 );
 
-INSERT INTO LOJA_CARRO 
-VALUES
-(1,1,1),
-(2,2,2),
-(3,3,3);
+INSERT INTO LOJA_CARRO (COD_LOJA_CARRO, COD_LOJA, COD_CARRO) VALUES
+(1, 1, 1),
+(2, 1, 2),
+(3, 1, 3),
+(4, 2, 1),
+(5, 2, 2),
+(6, 2, 3),
+(7, 3, 1),
+(8, 3, 2),
+(9, 3, 3);
