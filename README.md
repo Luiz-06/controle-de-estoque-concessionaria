@@ -1,40 +1,40 @@
-# Sistema de Gestão para Concessionária de Veículos
+# 🚗 Sistema de Gestão para Concessionária de Veículos
 
-## Descrição do Projeto
+## 📘 Descrição do Projeto
 
-Este projeto consiste em um sistema integrado para a gestão de concessionárias de veículos com múltiplas lojas. Cada loja possui seu próprio estoque de carros, que variam em marca, modelo, cor e tipo (como SUV, sedan ou hatch). O sistema possibilita o cadastro detalhado dos veículos, incluindo informações como nome, ano, preço e quantidade disponível.
+Este sistema foi desenvolvido para gerenciar concessionárias de veículos com múltiplas lojas integradas a um **estoque centralizado**.
 
-Além do controle de estoque, o sistema gerencia os funcionários responsáveis pelas vendas, acompanhando suas metas e desempenho mensal. A plataforma registra todas as vendas realizadas, vinculando o vendedor responsável, o cliente comprador e os itens vendidos.
+Cada loja atua como ponto de atendimento ao cliente e processamento de solicitações de compra, mas **os veículos são armazenados no estoque principal da rede**. Quando um cliente solicita um carro em uma loja, essa unidade requisita o veículo ao **estoque central**, e realiza a entrega posteriormente ao cliente.
 
-O sistema atende tanto clientes Pessoa Física quanto Pessoa Jurídica, armazenando dados relevantes como CPF ou CNPJ conforme o tipo de cliente. Isso permite o controle detalhado de:
-
-- Estoque de carros em cada loja
-- Desempenho individual de cada funcionário de vendas
-- Histórico de vendas por cliente
-- Rastreabilidade completa das vendas: quais carros foram vendidos, quando e por qual vendedor
+Além disso, cada funcionário de vendas está **vinculado exclusivamente a uma única loja**, ou seja, **não atuam em toda a rede**, o que permite um controle individualizado de metas e desempenho por filial.
 
 ---
 
-## Funcionalidades Principais
+## ⚙️ Funcionalidades Principais
 
-- Cadastro e controle do estoque de veículos por loja  
-- Registro detalhado das vendas, associando vendedores, clientes e itens vendidos  
-- Suporte a diferentes tipos de clientes (Pessoa Física e Jurídica)  
-- Monitoramento das metas e desempenho dos funcionários  
-- Histórico completo das operações de venda, facilitando análise e controle  
+- 📦 **Cadastro e controle do estoque central de veículos**
+- 🏬 **Gestão de solicitações de veículos feitas pelas lojas**
+- 🧾 **Registro completo de vendas**, vinculando vendedores, clientes e veículos entregues
+- 👥 **Suporte a diferentes tipos de clientes** (Pessoa Física e Jurídica), com CPF ou CNPJ
+- 👤 **Controle individual de desempenho e metas dos vendedores por loja**
+- 📊 **Histórico detalhado das operações**, com rastreabilidade completa: quando, o quê, para quem e por quem foi vendido
 
 ---
 
-## Como Utilizar
+## 🛠️ Tecnologias Utilizadas
 
-1. Clone este repositório:  
+*Aqui você pode listar as tecnologias utilizadas, por exemplo:*
+
+- Node.js / Express
+- PostgreSQL / Sequelize
+- React / Next.js
+- Docker
+- etc.
+
+---
+
+## 🚀 Como Utilizar
+
+1. Clone o repositório:
    ```bash
    git clone https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
-
-## Colaboradores
-
-- **Luiz Felipe**  
-  GitHub: [Link do GitHub](https://github.com/Luiz-06)
-
-- **Pedro Vitor**  
-  GitHub: [Link do GitHub](https://github.com/PedroVenanci0)
