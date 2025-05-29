@@ -25,17 +25,16 @@ O sistema atende tanto clientes Pessoa Física quanto Pessoa Jurídica, armazena
 
 ---
 
-## Estrutura da Documentação
-
-Na pasta `Documentação` você encontrará:
-
-- Descrição narrativa do sistema (`README.md`)  
-- Diagrama Entidade-Relacionamento (ER) modelando as entidades e seus relacionamentos (`diagrama_ER.png`)  
-
----
-
 ## Como Utilizar
 
 1. Clone este repositório:  
    ```bash
    git clone https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
+
+## Colaboradores
+
+- **Luiz Felipe**  
+  GitHub: [https://github.com/Luiz-06](COLE_AQUI_O_LINK)
+
+- **Pedro Vitor**  
+  GitHub: [https://github.com/PedroVenanci0](COLE_AQUI_O_LINK)
