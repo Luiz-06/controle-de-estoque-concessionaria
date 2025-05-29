@@ -1,0 +1,11 @@
+-- Tabela de Marcas (referência para CARRO)
+CREATE TABLE MARCA (
+    COD_MARCA INT PRIMARY KEY, 
+    NOME VARCHAR(20)
+);
+
+INSERT INTO MARCA
+VALUES
+(1, 'TOYOTA'),
+(2, 'CHEVROLET'),
+(3, 'FORD');
