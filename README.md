@@ -21,15 +21,13 @@ Além disso, cada funcionário de vendas está **vinculado exclusivamente a uma 
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Colaboradores
 
-*Aqui você pode listar as tecnologias utilizadas, por exemplo:*
+- **Luiz Felipe**  
+GitHub: [Link do GitHub](https://github.com/Luiz-06)
 
-- Node.js / Express
-- PostgreSQL / Sequelize
-- React / Next.js
-- Docker
-- etc.
+- **Pedro Victor**  
+GitHub: [Link do GitHub](https://github.com/PedroVenanci0)
 
 ---
 
