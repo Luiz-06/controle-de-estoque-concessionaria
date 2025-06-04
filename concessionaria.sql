@@ -72,7 +72,8 @@ CREATE TABLE ITEM_VENDA (
     COD_VENDA INT,
     COD_LOJA_CARRO INT,
     QTD_DE_ITENS INT,
-    FOREIGN KEY (COD_VENDA) REFERENCES VENDA(COD_VENDA)
+    FOREIGN KEY (COD_VENDA) REFERENCES VENDA(COD_VENDA),
+    FOREIGN KEY (COD_LOJA_CARRO) REFERENCES LOJA_CARRO(COD_LOJA_CARRO)
 );
 
 -- Tabela de Cores (referência para CARRO)
@@ -312,7 +313,6 @@ CREATE TRIGGER validar_qtd_tr
 BEFORE INSERT OR UPDATE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION validar_qtd();
 
-
 -- Valida a data de venda inserida, para negar qualquer data futura a data atual.
 
 CREATE OR REPLACE FUNCTION fn_impede_venda_futura()
@@ -390,7 +390,6 @@ BEFORE INSERT OR UPDATE ON FUNCIONARIO
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_meta_mensal_funcionario();
 
-
 -- Valida o valor da venda ao Cliente
 
 CREATE OR REPLACE FUNCTION fn_atualiza_gasto_cliente()
@@ -429,8 +428,71 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
 CREATE TRIGGER tg_atualiza_gasto_cliente
 AFTER INSERT OR UPDATE OR DELETE ON VENDA
 FOR EACH ROW
 EXECUTE FUNCTION fn_atualiza_gasto_cliente();
+
+-- Funcionario bateu a meta
+
+CREATE OR REPLACE FUNCTION checa_meta()
+RETURNS TRIGGER AS $$
+DECLARE
+total FLOAT;
+meta FLOAT;
+BEGIN
+SELECT QTD_VENDIDA_NO_MES, META_MENSAL INTO total, meta
+FROM FUNCIONARIO
+WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO;
+
+IF (total + NEW.VALOR_TOTAL) >= meta THEN
+RAISE NOTICE 'Funcionário atingiu ou ultrapassou a meta mensal!';
+END IF;
+
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_checa_meta
+BEFORE INSERT ON VENDA
+FOR EACH ROW EXECUTE FUNCTION checa_meta();
+
+-- Validar para que o funcionario so venda carros da sua loja 
+
+CREATE OR REPLACE FUNCTION verificar_funcionario_loja_item_venda()
+RETURNS TRIGGER AS $$
+DECLARE
+    loja_funcionario INT;
+    loja_carro INT;
+    cod_funcionario INT;
+BEGIN
+    -- Pegar o código do funcionário na venda
+    SELECT COD_FUNCIONARIO INTO cod_funcionario
+    FROM VENDA
+    WHERE COD_VENDA = NEW.COD_VENDA;
+
+    -- Pegar a loja do funcionário
+    SELECT LC.COD_LOJA INTO loja_funcionario
+    FROM FUNCIONARIO F
+    JOIN LOJA_CARRO LC ON F.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
+    WHERE F.COD_FUNCIONARIO = cod_funcionario;
+
+    -- Pegar a loja do carro no item de venda
+    SELECT COD_LOJA INTO loja_carro
+    FROM LOJA_CARRO
+    WHERE COD_LOJA_CARRO = NEW.COD_LOJA_CARRO;
+
+    -- Comparar as lojas
+    IF loja_funcionario <> loja_carro THEN
+        RAISE EXCEPTION 'Funcionário só pode vender carros da loja onde trabalha.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verificar_funcionario_loja_item_venda_tr
+BEFORE INSERT OR UPDATE ON ITEM_VENDA
+FOR EACH ROW EXECUTE FUNCTION verificar_funcionario_loja_item_venda();
+
+
