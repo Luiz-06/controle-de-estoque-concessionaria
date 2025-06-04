@@ -346,9 +346,9 @@ BEGIN
         IF OLD.VALOR_TOTAL IS DISTINCT FROM NEW.VALOR_TOTAL OR OLD.COD_FUNCIONARIO IS DISTINCT FROM NEW.COD_FUNCIONARIO THEN
             -- Remove o valor antigo do funcionário antigo (se houver)
             IF OLD.COD_FUNCIONARIO IS NOT NULL THEN
-                 UPDATE FUNCIONARIO
-                 SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) - OLD.VALOR_TOTAL
-                 WHERE COD_FUNCIONARIO = OLD.COD_FUNCIONARIO;
+                UPDATE FUNCIONARIO
+                SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) - OLD.VALOR_TOTAL
+                WHERE COD_FUNCIONARIO = OLD.COD_FUNCIONARIO;
             END IF;
 
             -- Adiciona o novo valor ao novo funcionário
