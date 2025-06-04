@@ -5,14 +5,15 @@ CREATE TABLE FUNCIONARIO (
     DT_NASCIMENTO DATE,
     SALARIO FLOAT,
     META_MENSAL FLOAT,
-    QTD_VENDIDA_NO_MES FLOAT
+    QTD_VENDIDA_NO_MES FLOAT,
+    COD_LOJA_CARRO INT,
+    FOREIGN KEY (COD_LOJA_CARRO) REFERENCES LOJA_CARRO(COD_LOJA_CARRO)
 );
 
--- Inserção de dados na tabela FUNCIONARIO
-INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MENSAL, QTD_VENDIDA_NO_MES) VALUES
-(1, 'Carlos Alberto Silva', '1985-03-15', 3500.00, 10000.00, 0),
-(2, 'Beatriz Ferreira Souza', '1992-07-20', 2800.00, 8000.00, 0),
-(3, 'Ricardo Lima Azevedo', '1978-11-05', 4200.00, 12000.00, 0);
+INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MENSAL, QTD_VENDIDA_NO_MES, COD_LOJA_CARRO) VALUES
+(1, 'Carlos Alberto Silva', '1985-03-15', 3500.00, 10000.00, 0, 1),
+(2, 'Beatriz Ferreira Souza', '1992-07-20', 2800.00, 8000.00, 0, 2),
+(3, 'Ricardo Lima Azevedo', '1978-11-05', 4200.00, 12000.00, 0, 3);
 
 -- Tabela de Clientes (referenciada por VENDA)
 CREATE TABLE CLIENTE (
@@ -22,7 +23,6 @@ CREATE TABLE CLIENTE (
     QTD_GASTO FLOAT
 );
 
--- Inserção de dados na tabela CLIENTE
 INSERT INTO CLIENTE (COD_CLIENTE, NOME, DT_NASCIMENTO, QTD_GASTO) VALUES
 (1, 'Fernanda Moreira Costa', '1990-01-25', 0),
 (2, 'Lucas Dias Martins', '1988-06-10', 0),
@@ -248,11 +248,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Validar se o funcionário e o cliente existem
-
 CREATE TRIGGER total_da_venda_tr 
 AFTER INSERT OR UPDATE OR DELETE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION total_da_venda();
+
+-- Validar se o funcionário e o cliente existem
 
 CREATE OR REPLACE FUNCTION validar_funcionario_cliente() 
 RETURNS TRIGGER AS 
