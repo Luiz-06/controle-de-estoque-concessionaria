@@ -311,3 +311,126 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER validar_qtd_tr 
 BEFORE INSERT OR UPDATE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION validar_qtd();
+
+
+-- Valida a data de venda inserida, para negar qualquer data futura a data atual.
+
+CREATE OR REPLACE FUNCTION fn_impede_venda_futura()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.DT_VENDA > CURRENT_DATE THEN
+        RAISE EXCEPTION 'Não é permitido registrar vendas com data futura (Data informada: %).', TO_CHAR(NEW.DT_VENDA, 'DD/MM/YYYY');
+    END IF;
+    RETURN NEW; -- Permite a operação se a data for válida
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_impede_venda_futura
+BEFORE INSERT OR UPDATE ON VENDA
+FOR EACH ROW
+EXECUTE FUNCTION fn_impede_venda_futura();
+
+-- Valida a adição de valor a venda do funcionario
+
+CREATE OR REPLACE FUNCTION fn_atualiza_qtd_vendida_funcionario()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        -- Adiciona o valor da nova venda ao funcionário
+        UPDATE FUNCIONARIO
+        SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) + NEW.VALOR_TOTAL
+        WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- Se o valor da venda mudou ou o funcionário responsável mudou
+        IF OLD.VALOR_TOTAL IS DISTINCT FROM NEW.VALOR_TOTAL OR OLD.COD_FUNCIONARIO IS DISTINCT FROM NEW.COD_FUNCIONARIO THEN
+            -- Remove o valor antigo do funcionário antigo (se houver)
+            IF OLD.COD_FUNCIONARIO IS NOT NULL THEN
+                 UPDATE FUNCIONARIO
+                 SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) - OLD.VALOR_TOTAL
+                 WHERE COD_FUNCIONARIO = OLD.COD_FUNCIONARIO;
+            END IF;
+
+            -- Adiciona o novo valor ao novo funcionário
+            UPDATE FUNCIONARIO
+            SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) + NEW.VALOR_TOTAL
+            WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO;
+        END IF;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        -- Subtrai o valor da venda deletada do funcionário
+        UPDATE FUNCIONARIO
+        SET QTD_VENDIDA_NO_MES = COALESCE(QTD_VENDIDA_NO_MES, 0) - OLD.VALOR_TOTAL
+        WHERE COD_FUNCIONARIO = OLD.COD_FUNCIONARIO;
+    END IF;
+
+    RETURN NULL; -- Para triggers AFTER, o valor de retorno é geralmente ignorado
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_atualiza_qtd_vendida_funcionario
+AFTER INSERT OR UPDATE OR DELETE ON VENDA
+FOR EACH ROW
+EXECUTE FUNCTION fn_atualiza_qtd_vendida_funcionario();
+
+-- Valida se a meta mensal inserida é negativa
+
+CREATE OR REPLACE FUNCTION fn_valida_meta_mensal_funcionario()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.META_MENSAL < 0 THEN
+        RAISE EXCEPTION 'A meta mensal (R$ %.2f) do funcionário não pode ser negativa.', NEW.META_MENSAL;
+    END IF;
+    RETURN NEW; -- Permite a operação se a validação passar
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_valida_meta_mensal_funcionario
+BEFORE INSERT OR UPDATE ON FUNCIONARIO
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_meta_mensal_funcionario();
+
+
+-- Valida o valor da venda ao Cliente
+
+CREATE OR REPLACE FUNCTION fn_atualiza_gasto_cliente()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        -- Adiciona o valor da nova venda ao cliente
+        UPDATE CLIENTE
+        SET QTD_GASTO = COALESCE(QTD_GASTO, 0) + NEW.VALOR_TOTAL
+        WHERE COD_CLIENTE = NEW.COD_CLIENTE;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- Se o valor da venda mudou ou o cliente mudou
+        IF OLD.VALOR_TOTAL IS DISTINCT FROM NEW.VALOR_TOTAL OR OLD.COD_CLIENTE IS DISTINCT FROM NEW.COD_CLIENTE THEN
+            -- Remove o valor antigo do cliente antigo (se houver)
+            IF OLD.COD_CLIENTE IS NOT NULL THEN
+                UPDATE CLIENTE
+                SET QTD_GASTO = COALESCE(QTD_GASTO, 0) - OLD.VALOR_TOTAL
+                WHERE COD_CLIENTE = OLD.COD_CLIENTE;
+            END IF;
+
+            -- Adiciona o novo valor ao novo cliente
+            UPDATE CLIENTE
+            SET QTD_GASTO = COALESCE(QTD_GASTO, 0) + NEW.VALOR_TOTAL
+            WHERE COD_CLIENTE = NEW.COD_CLIENTE;
+        END IF;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        -- Subtrai o valor da venda deletada do cliente
+        UPDATE CLIENTE
+        SET QTD_GASTO = COALESCE(QTD_GASTO, 0) - OLD.VALOR_TOTAL
+        WHERE COD_CLIENTE = OLD.COD_CLIENTE;
+    END IF;
+
+    RETURN NULL; -- Para triggers AFTER, o valor de retorno é geralmente ignorado
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER tg_atualiza_gasto_cliente
+AFTER INSERT OR UPDATE OR DELETE ON VENDA
+FOR EACH ROW
+EXECUTE FUNCTION fn_atualiza_gasto_cliente();
