@@ -31,18 +31,3 @@ CREATE TRIGGER VALIDAR_FUNCIONARIO_CLIENTE_TR
 AFTER INSERT OR UPDATE ON VENDA 
 FOR EACH ROW EXECUTE FUNCTION validar_funcionario_cliente()
 
--- Testes
-
-select * from venda
-
-insert into venda
-values
-(1, 4, 1, NULL, current_date)
-
-insert into venda
-values
-(1, 1, 7, NULL, current_date)
-
-insert into venda
-values
-(1, 1, 1, NULL, current_date)
