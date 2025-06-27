@@ -18,17 +18,6 @@ O sistema simula um cenário real onde cada loja tem seu próprio estoque de car
 1.  **Copie o Código:** Baixe ou clone os arquivos do projeto.
 2.  **Crie o Banco de Dados:** Use PostgreSQL para criar um novo banco de dados.
 3.  **Execute o Script:** Abra o arquivo SQL principal e execute-o por completo. Isso irá criar todas as tabelas, regras e funções necessárias.
-4.  **Gerencie a Loja com SQL:** Agora, você pode usar comandos SQL para realizar as operações.
-
-    * **Para cadastrar uma nova cor de carro:**
-        ```sql
-        SELECT inserir_na_tabela('COR', 'COD_COR, NOME', '4, ''AZUL''');
-        ```
-
-    * **Para ver qual loja vendeu mais em Junho de 2025:**
-        ```sql
-        SELECT * FROM fn_loja_campea_de_vendas(6, 2025);
-        ```
 
 ## 👥 Colaboradores
 
