@@ -1,0 +1,17 @@
+CREATE OR REPLACE FUNCTION cliente_maior_gasto()
+RETURNS TABLE (nome_cliente VARCHAR, total_gasto FLOAT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        C.NOME,
+        C.QTD_GASTO
+    FROM
+        CLIENTE AS C
+    WHERE C.QTD_GASTO > 0
+    ORDER BY
+        C.QTD_GASTO DESC
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from cliente_maior_gasto()

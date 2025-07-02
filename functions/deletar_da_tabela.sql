@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION deletar_de_tabela(
+CREATE OR REPLACE FUNCTION deletar_da_tabela(
     nome_tabela TEXT,
     condicao TEXT
 )
