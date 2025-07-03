@@ -445,6 +445,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Função: Adiciona um item (carro) a uma venda existente.
+--================================================================================--
+-- 	Função inserirNaVenda ATUALIZADA com Validação Personalizada
+--================================================================================--
 CREATE OR REPLACE FUNCTION inserirNaVenda(
 	p_cod_venda INT,
 	p_cod_loja_carro INT,
@@ -454,6 +457,20 @@ RETURNS VOID AS $$
 DECLARE
 	v_novo_item_venda_id INT;
 BEGIN
+	-- Validação 1: Verifica se a venda existe
+	IF NOT EXISTS (SELECT 1 FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda) THEN
+		RAISE EXCEPTION 'ERRO PERSONALIZADO: A venda com o código % não foi encontrada. Impossível adicionar o item.', p_cod_venda;
+	END IF;
+
+	-- ========================================================== --
+	--      NOVA VALIDAÇÃO DE QUANTIDADE (TESTE AVANÇADO 1)
+	-- ========================================================== --
+	-- Validação 2: Verifica se a quantidade de itens é válida (maior que zero)
+	IF p_qtd_de_itens <= 0 THEN
+		RAISE EXCEPTION 'ERRO PERSONALIZADO: A quantidade de itens para venda (%) deve ser um número positivo maior que zero.', p_qtd_de_itens;
+	END IF;
+	-- ========================================================== --
+
 	SELECT COALESCE(MAX(COD_ITEM_VENDA), 0) + 1 INTO v_novo_item_venda_id FROM ITEM_VENDA;
 
 	INSERT INTO ITEM_VENDA (COD_ITEM_VENDA, COD_VENDA, COD_LOJA_CARRO, QTD_DE_ITENS)
@@ -463,6 +480,7 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
+
 
 -- Função: Retorna uma visão completa de uma venda
 CREATE OR REPLACE FUNCTION detalhes_venda(p_cod_venda INT)
@@ -509,5 +527,219 @@ BEGIN
 	JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
 	WHERE
 		V.COD_VENDA = p_cod_venda;
+END;
+$$ LANGUAGE plpgsql;
+
+--================================================================================--
+-- 	1. Função para Listar Carros Disponíveis (COM VALIDAÇÃO)
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_listar_carros_disponiveis_por_loja(p_cod_loja INT)
+RETURNS TABLE (
+    nome_carro VARCHAR,
+    nome_marca VARCHAR,
+    nome_tipo VARCHAR,
+    nome_cor VARCHAR,
+    ano_carro VARCHAR,
+    preco_carro FLOAT,
+    qtd_em_estoque INT
+) AS $$
+BEGIN
+    -- Validação: Verifica se a loja com o código informado existe.
+    IF NOT EXISTS (SELECT 1 FROM LOJA WHERE COD_LOJA = p_cod_loja) THEN
+        RAISE EXCEPTION 'ERRO PERSONALIZADO: A loja com o código % não foi encontrada.', p_cod_loja;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        C.NOME,
+        M.NOME,
+        T.NOME,
+        CO.NOME,
+        C.ANO,
+        C.PRECO,
+        C.QTD_EM_ESTOQUE
+    FROM
+        CARRO AS C
+    JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
+    JOIN TIPO AS T ON C.COD_TIPO = T.COD_TIPO
+    JOIN COR AS CO ON C.COD_COR = CO.COD_COR
+    JOIN LOJA_CARRO AS LC ON C.COD_CARRO = LC.COD_CARRO
+    WHERE
+        LC.COD_LOJA = p_cod_loja AND C.QTD_EM_ESTOQUE > 0;
+END;
+$$ LANGUAGE plpgsql;
+
+
+--================================================================================--
+-- 	2. Função para Lista de Vendas por Funcionário (COM VALIDAÇÃO)
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_listar_vendas_por_funcionario(p_cod_funcionario INT)
+RETURNS TABLE (
+    id_venda INT,
+    data_da_venda DATE,
+    nome_cliente VARCHAR,
+    valor_total FLOAT
+) AS $$
+BEGIN
+    -- Validação: Verifica se o funcionário com o código informado existe.
+    IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = p_cod_funcionario) THEN
+        RAISE EXCEPTION 'ERRO PERSONALIZADO: O funcionário com o código % não foi encontrado.', p_cod_funcionario;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        V.COD_VENDA,
+        V.DT_VENDA,
+        C.NOME,
+        V.VALOR_TOTAL
+    FROM
+        VENDA AS V
+    JOIN CLIENTE AS C ON V.COD_CLIENTE = C.COD_CLIENTE
+    WHERE
+        V.COD_FUNCIONARIO = p_cod_funcionario
+    ORDER BY
+        V.DT_VENDA DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+
+--================================================================================--
+-- 	3. Função para Histórico de Compras do Cliente (COM VALIDAÇÃO)
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_historico_compras_cliente(p_cod_cliente INT)
+RETURNS TABLE (
+    data_da_compra DATE,
+    id_venda INT,
+    nome_carro VARCHAR,
+    marca_carro VARCHAR,
+    quantidade INT,
+    preco_unitario FLOAT,
+    subtotal FLOAT
+) AS $$
+BEGIN
+    -- Validação: Verifica se o cliente com o código informado existe.
+    IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
+        RAISE EXCEPTION 'ERRO PERSONALIZADO: O cliente com o código % não foi encontrado.', p_cod_cliente;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        V.DT_VENDA,
+        V.COD_VENDA,
+        C.NOME,
+        M.NOME,
+        IV.QTD_DE_ITENS,
+        C.PRECO,
+        (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
+    FROM
+        VENDA AS V
+    JOIN ITEM_VENDA AS IV ON V.COD_VENDA = IV.COD_VENDA
+    JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
+    JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO
+    JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
+    WHERE
+        V.COD_CLIENTE = p_cod_cliente
+    ORDER BY
+        V.DT_VENDA DESC, V.COD_VENDA;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+--================================================================================--
+-- 			Função para Funcionário(s) que Mais Vendeu(ram)
+--================================================================================--
+-- DESCRIÇÃO: Retorna o(s) funcionário(s) com o maior valor total de vendas
+--            registrado na coluna 'QTD_VENDIDA_NO_MES'. Lida com empates.
+-- PARÂMETROS: Nenhum.
+-- RETORNA: Tabela com o nome do(s) funcionário(s) e o total vendido.
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_funcionario_campeao_de_vendas()
+RETURNS TABLE (
+    nome_funcionario VARCHAR,
+    total_vendido_no_mes FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        F.NOME,
+        F.QTD_VENDIDA_NO_MES
+    FROM
+        FUNCIONARIO AS F
+    WHERE
+        F.QTD_VENDIDA_NO_MES = (SELECT MAX(QTD_VENDIDA_NO_MES) FROM FUNCIONARIO);
+END;
+$$ LANGUAGE plpgsql;
+
+
+--================================================================================--
+-- 			Função para Alteração de Dados (UPDATE)
+--================================================================================--
+-- DESCRIÇÃO: Exemplo de função de UPDATE. Altera o preço de um carro específico,
+--            com validações para garantir que o carro exista e o preço seja positivo.
+-- PARÂMETROS: p_cod_carro (INT) - Código do carro a ser alterado.
+--             p_novo_preco (FLOAT) - O novo preço para o carro.
+-- RETORNA: VOID (Nenhum). Apenas executa a ação.
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_atualizar_preco_carro(p_cod_carro INT, p_novo_preco FLOAT)
+RETURNS VOID AS $$
+DECLARE
+    v_carro_existe INT;
+BEGIN
+    -- 1. Validar se o preço é positivo
+    IF p_novo_preco <= 0 THEN
+        RAISE EXCEPTION 'O novo preço (R$ %.2f) deve ser um valor positivo.', p_novo_preco;
+    END IF;
+
+    -- 2. Validar se o carro existe
+    SELECT COUNT(*) INTO v_carro_existe FROM CARRO WHERE COD_CARRO = p_cod_carro;
+    IF v_carro_existe = 0 THEN
+        RAISE EXCEPTION 'O carro com código % não foi encontrado.', p_cod_carro;
+    END IF;
+
+    -- 3. Executar a alteração
+    UPDATE CARRO
+    SET PRECO = p_novo_preco
+    WHERE COD_CARRO = p_cod_carro;
+
+    RAISE NOTICE 'Preço do carro % atualizado para R$ %.2f com sucesso.', p_cod_carro, p_novo_preco;
+END;
+$$ LANGUAGE plpgsql;
+
+--================================================================================--
+-- 	Função para Listar o Total Vendido por Cada Loja
+--================================================================================--
+-- DESCRIÇÃO: Calcula a soma total do valor de todas as vendas e agrupa o
+--            resultado por loja, mostrando o desempenho de cada uma.
+-- PARÂMETROS: Nenhum.
+-- RETORNA: Tabela com o nome da loja e o seu total de vendas.
+--================================================================================--
+--================================================================================--
+-- 	Função CORRIGIDA para Listar o Total Vendido por Cada Loja
+--================================================================================--
+-- DESCRIÇÃO: Calcula e lista o total vendido por TODAS as lojas, mostrando 0
+--            para aquelas que não tiveram vendas.
+--================================================================================--
+CREATE OR REPLACE FUNCTION fn_total_vendido_por_loja()
+RETURNS TABLE (
+    nome_da_loja VARCHAR,
+    valor_total_vendido FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        L.NOME,
+        -- Usamos COALESCE para transformar o resultado NULL (de lojas sem vendas) em 0
+        COALESCE(SUM(V.VALOR_TOTAL), 0) AS total_vendido
+    FROM
+        LOJA AS L -- 1. Começamos pela tabela LOJA para garantir que todas apareçam
+    LEFT JOIN
+        FUNCIONARIO AS F ON L.COD_LOJA = F.COD_LOJA -- 2. Usamos LEFT JOIN
+    LEFT JOIN
+        VENDA AS V ON F.COD_FUNCIONARIO = V.COD_FUNCIONARIO -- 3. Usamos LEFT JOIN novamente
+    GROUP BY
+        L.NOME
+    ORDER BY
+        total_vendido DESC;
 END;
 $$ LANGUAGE plpgsql;
