@@ -90,44 +90,20 @@ CREATE TABLE ITEM_VENDA (
 );
 
 
---================================================================================--
--- 				2. INSERÇÃO DE DADOS INICIAIS
---================================================================================--
 
-INSERT INTO COR (COD_COR, NOME) VALUES (1, 'PRETO'), (2, 'BRANCO'), (3, 'PRATA');
-INSERT INTO LOJA (COD_LOJA, NOME) VALUES (1, 'LOJA 1'), (2, 'LOJA 2'), (3, 'LOJA 3');
-INSERT INTO MARCA (COD_MARCA, NOME) VALUES (1, 'TOYOTA'), (2, 'CHEVROLET'), (3, 'FORD');
-INSERT INTO TIPO (COD_TIPO, NOME) VALUES (1, 'HATCH'), (2, 'SUV'), (3, 'SEDAN');
 
-INSERT INTO CARRO (COD_CARRO, COD_COR, COD_MARCA, COD_TIPO, NOME, PRECO, ANO, QTD_EM_ESTOQUE) VALUES
-(1, 1, 1, 1, 'COROLLA', 150000.00, '2024', 10),
-(2, 2, 2, 2, 'ONIX', 85000.00, '2023', 10),
-(3, 3, 3, 3, 'RANGER', 190000.00, '2022', 10);
 
-INSERT INTO LOJA_CARRO (COD_LOJA_CARRO, COD_LOJA, COD_CARRO) VALUES
-(1, 1, 1), (2, 1, 2), (3, 1, 3),
-(4, 2, 1), (5, 2, 2), (6, 2, 3),
-(7, 3, 1), (8, 3, 2), (9, 3, 3);
 
-INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MENSAL, QTD_VENDIDA_NO_MES, COD_LOJA) VALUES
-(1, 'Carlos Alberto Silva', '1985-03-15', 3500.00, 10000.00, 0, 1),
-(2, 'Beatriz Ferreira Souza', '1992-07-20', 2800.00, 8000.00, 0, 2),
-(3, 'Ricardo Lima Azevedo', '1978-11-05', 4200.00, 12000.00, 0, 3);
 
-INSERT INTO CLIENTE (COD_CLIENTE, NOME, DT_NASCIMENTO, QTD_GASTO) VALUES
-(1, 'Fernanda Moreira Costa', '1990-01-25', 0), (2, 'Lucas Dias Martins', '1988-06-10', 0),
-(3, 'Juliana Pereira Alves', '2000-09-30', 0), (4, 'TecnoSoluções Avançadas Ltda', '2010-04-12', 0),
-(5, 'Comércio Varejista XYZ EIRELI', '2015-08-01', 0), (6, 'Serviços Gerais Alfa & Filhos S.A.', '2005-11-20', 0);
 
-INSERT INTO PESSOA_FISICA (COD_CLIENTE, CPF) VALUES (1, '11122233344'), (2, '55566677788'), (3, '99900011122');
-INSERT INTO PESSOA_JURIDICA (COD_CLIENTE, CNPJ) VALUES (4, '11222333000144'), (5, '44555666000188'), (6, '77888999000122');
+
 
 
 --================================================================================--
--- 				3. GATILHOS (TRIGGERS) E SUAS FUNÇÕES
+-- 				2. GATILHOS (TRIGGERS) E SUAS FUNÇÕES
 --================================================================================--
 
--- 3.1. Gatilho para calcular o total da venda e atualizar o estoque
+-- 2.1. Gatilho para calcular o total da venda e atualizar o estoque
 CREATE OR REPLACE FUNCTION fn_total_da_venda() RETURNS TRIGGER AS $$
 BEGIN
 	IF TG_OP = 'INSERT' THEN
@@ -148,7 +124,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_total_da_venda AFTER INSERT OR UPDATE OR DELETE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_total_da_venda();
 
--- 3.2. Gatilho para validar a existência do funcionário e do cliente na venda
+-- 2.2. Gatilho para validar a existência do funcionário e do cliente na venda
 CREATE OR REPLACE FUNCTION fn_validar_funcionario_cliente() RETURNS TRIGGER AS $$
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO) THEN
@@ -164,7 +140,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_validar_funcionario_cliente BEFORE INSERT OR UPDATE ON VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_validar_funcionario_cliente();
 
--- 3.3. Gatilho para validar se a quantidade vendida não é maior que o estoque
+-- 2.3. Gatilho para validar se a quantidade vendida não é maior que o estoque
 CREATE OR REPLACE FUNCTION fn_validar_qtd() RETURNS TRIGGER AS $$
 DECLARE
 	qtd_presente_no_estoque INT;
@@ -180,7 +156,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_validar_qtd BEFORE INSERT OR UPDATE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_validar_qtd();
 
--- 3.4. Gatilho para impedir o registro de vendas com data futura
+-- 2.4. Gatilho para impedir o registro de vendas com data futura
 CREATE OR REPLACE FUNCTION fn_impede_venda_futura() RETURNS TRIGGER AS $$
 BEGIN
 	IF NEW.DT_VENDA > CURRENT_DATE THEN
@@ -193,7 +169,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_impede_venda_futura BEFORE INSERT OR UPDATE ON VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_impede_venda_futura();
 
--- 3.5. Gatilho para atualizar o total vendido pelo funcionário
+-- 2.5. Gatilho para atualizar o total vendido pelo funcionário
 CREATE OR REPLACE FUNCTION fn_atualiza_qtd_vendida_funcionario() RETURNS TRIGGER AS $$
 BEGIN
 	IF TG_OP = 'INSERT' THEN
@@ -215,7 +191,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_atualiza_qtd_vendida_funcionario AFTER INSERT OR UPDATE OR DELETE ON VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_atualiza_qtd_vendida_funcionario();
 
--- 3.6. Gatilho para impedir que a meta mensal de um funcionário seja negativa
+-- 2.6. Gatilho para impedir que a meta mensal de um funcionário seja negativa
 CREATE OR REPLACE FUNCTION fn_valida_meta_mensal_funcionario() RETURNS TRIGGER AS $$
 BEGIN
 	IF NEW.META_MENSAL < 0 THEN
@@ -228,7 +204,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_valida_meta_mensal_funcionario BEFORE INSERT OR UPDATE ON FUNCIONARIO
 FOR EACH ROW EXECUTE FUNCTION fn_valida_meta_mensal_funcionario();
 
--- 3.7. Gatilho para atualizar o valor total gasto pelo cliente
+-- 2.7. Gatilho para atualizar o valor total gasto pelo cliente
 CREATE OR REPLACE FUNCTION fn_atualiza_gasto_cliente() RETURNS TRIGGER AS $$
 BEGIN
 	IF TG_OP = 'INSERT' THEN
@@ -250,7 +226,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_atualiza_gasto_cliente AFTER INSERT OR UPDATE OR DELETE ON VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_atualiza_gasto_cliente();
 
--- 3.8. Gatilho para emitir um aviso quando o funcionário atinge a meta mensal
+-- 2.8. Gatilho para emitir um aviso quando o funcionário atinge a meta mensal
 CREATE OR REPLACE FUNCTION fn_checa_meta() RETURNS TRIGGER AS $$
 DECLARE
 	total FLOAT;
@@ -267,7 +243,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_checa_meta BEFORE INSERT OR UPDATE ON VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_checa_meta();
 
--- 3.9. Gatilho para garantir que um funcionário só venda carros da sua própria loja
+-- 2.9. Gatilho para garantir que um funcionário só venda carros da sua própria loja
 CREATE OR REPLACE FUNCTION fn_verificar_funcionario_loja_item_venda() RETURNS TRIGGER AS $$
 DECLARE
 	v_cod_loja_funcionario INT;
@@ -292,12 +268,22 @@ CREATE TRIGGER tg_verificar_funcionario_loja_item_venda BEFORE INSERT OR UPDATE 
 FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
 
 
+
+
+
+
+
+
+
+
+
+
 --================================================================================--
--- 				4. FUNÇÕES
+-- 				3. FUNÇÕES
 --================================================================================--
 
 ------------------------------------------------------------------------------------
--- 4.1. FUNÇÕES GENÉRICAS DE MANIPULAÇÃO DE DADOS
+-- 3.1. FUNÇÕES GENÉRICAS DE MANIPULAÇÃO DE DADOS
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Insere um registro em uma tabela dinamicamente.
@@ -348,9 +334,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
 ------------------------------------------------------------------------------------
--- 4.2. FUNÇÕES DE LÓGICA DE NEGÓCIO (OPERAÇÕES DE VENDA)
+-- 3.2. FUNÇÕES DE LÓGICA DE NEGÓCIO (OPERAÇÕES DE VENDA)
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Cria um novo registro de venda para um cliente e funcionário.
@@ -386,9 +371,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
 ------------------------------------------------------------------------------------
--- 4.3. FUNÇÕES DE CONSULTA E RELATÓRIO
+-- 3.3. FUNÇÕES DE CONSULTA E RELATÓRIO
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Retorna uma visão completa (recibo) de uma venda específica.
@@ -486,7 +470,6 @@ BEGIN
         valor_restante DESC;
 END;
 $$ LANGUAGE plpgsql;
-
 
 -- DESCRIÇÃO: Calcula e lista o total vendido por TODAS as lojas, mostrando 0 para aquelas que não tiveram vendas.
 CREATE OR REPLACE FUNCTION fn_total_vendido_por_loja()

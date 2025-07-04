@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION validar_funcionario_cliente() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_validar_funcionario_cliente() RETURNS TRIGGER AS $$
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO) THEN
 		RAISE EXCEPTION 'Funcionário com código % não existe.', NEW.COD_FUNCIONARIO;
@@ -10,5 +10,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER validar_funcionario_cliente_tr BEFORE INSERT OR UPDATE ON VENDA
-FOR EACH ROW EXECUTE FUNCTION validar_funcionario_cliente();
+CREATE TRIGGER tg_validar_funcionario_cliente BEFORE INSERT OR UPDATE ON VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_validar_funcionario_cliente();

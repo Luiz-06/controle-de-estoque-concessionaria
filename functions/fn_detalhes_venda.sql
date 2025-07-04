@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION detalhes_venda(p_cod_venda INT)
+CREATE OR REPLACE FUNCTION fn_detalhes_venda(p_cod_venda INT)
 RETURNS TABLE (id_da_venda INT, data_venda DATE, valor_total_venda FLOAT, nome_cliente VARCHAR, nome_funcionario VARCHAR, nome_carro VARCHAR, marca_carro VARCHAR, quantidade_itens INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
 DECLARE
 	v_venda_existe INT;

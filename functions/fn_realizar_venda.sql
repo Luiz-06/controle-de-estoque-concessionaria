@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION realizarVenda(p_cod_cliente INT, p_cod_funcionario INT)
+CREATE OR REPLACE FUNCTION fn_realizar_venda(p_cod_cliente INT, p_cod_funcionario INT)
 RETURNS INT AS $$
 DECLARE
 	v_nova_venda_id INT;

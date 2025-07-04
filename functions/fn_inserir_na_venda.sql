@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION inserirNaVenda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
+CREATE OR REPLACE FUNCTION fn_inserir_na_venda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
 RETURNS VOID AS $$
 DECLARE
 	v_novo_item_venda_id INT;

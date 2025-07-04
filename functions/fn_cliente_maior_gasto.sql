@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION cliente_maior_gasto()
+CREATE OR REPLACE FUNCTION fn_cliente_maior_gasto()
 RETURNS TABLE (nome_cliente VARCHAR, total_gasto FLOAT) AS $$
 BEGIN
 	RETURN QUERY
