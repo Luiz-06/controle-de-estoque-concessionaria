@@ -6,14 +6,12 @@ SELECT * FROM COR
 SELECT fn_atualizar_tabela('carro', 'preco = 152000.00', 'cod_carro = 1');
 SELECT * FROM CARRO
 
-
 SELECT fn_deletar_da_tabela('cor', 'cod_cor = 4');
 SELECT * FROM COR
 
 SELECT fn_realizar_venda(1, 1);
 SELECT * FROM VENDA
 
--- Substitua '1' pelo código da venda retornado pelo comando anterior.
 SELECT fn_inserir_na_venda(1, 1, 1);
 SELECT * FROM ITEM_VENDA
 

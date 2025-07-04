@@ -1,56 +1,29 @@
 --================================================================================--
 -- 				SCRIPT DE POVOAMENTO MASSIVO DE DADOS
 --================================================================================--
--- 	Este script insere uma grande quantidade de dados em todas as tabelas
--- 	para simular um ambiente de produção e permitir testes completos.
---================================================================================--
-
---================================================================================--
--- 				1. LIMPEZA DOS DADOS EXISTENTES (PARA REEXECUTAR O SCRIPT)
---================================================================================--
--- A ordem é inversa à da criação para respeitar as chaves estrangeiras.
-DELETE FROM ITEM_VENDA;
-DELETE FROM VENDA;
-DELETE FROM PESSOA_FISICA;
-DELETE FROM PESSOA_JURIDICA;
-DELETE FROM CLIENTE;
-DELETE FROM FUNCIONARIO;
-DELETE FROM LOJA_CARRO;
-DELETE FROM CARRO;
-DELETE FROM LOJA;
-DELETE FROM MARCA;
-DELETE FROM TIPO;
-DELETE FROM COR;
-
 
 --================================================================================--
 -- 				2. POVOAMENTO DAS TABELAS BÁSICAS
 --================================================================================--
 
--- POVOANDO A TABELA COR
 INSERT INTO COR (COD_COR, NOME) VALUES
 (1, 'Preto'), (2, 'Branco'), (3, 'Prata'), (4, 'Vermelho'),
 (5, 'Azul Metálico'), (6, 'Cinza Grafite'), (7, 'Verde Oliva');
 
--- POVOANDO A TABELA TIPO
 INSERT INTO TIPO (COD_TIPO, NOME) VALUES
 (1, 'Hatch'), (2, 'SUV'), (3, 'Sedan'), (4, 'Picape'), (5, 'Esportivo');
 
--- POVOANDO A TABELA MARCA
 INSERT INTO MARCA (COD_MARCA, NOME) VALUES
 (1, 'Toyota'), (2, 'Chevrolet'), (3, 'Ford'), (4, 'Volkswagen'),
 (5, 'Hyundai'), (6, 'Fiat'), (7, 'Honda'), (8, 'BMW');
 
--- POVOANDO A TABELA LOJA
 INSERT INTO LOJA (COD_LOJA, NOME) VALUES
 (1, 'Matriz Teresina'), (2, 'Filial Parnaíba'), (3, 'Filial Picos'), (4, 'Filial Floriano');
-
 
 --================================================================================--
 -- 				3. POVOAMENTO DAS TABELAS DE RELACIONAMENTO E ENTIDADES PRINCIPAIS
 --================================================================================--
 
--- POVOANDO A TABELA CARRO
 INSERT INTO CARRO (COD_CARRO, COD_COR, COD_MARCA, COD_TIPO, NOME, PRECO, ANO, QTD_EM_ESTOQUE) VALUES
 -- Toyota
 (1, 1, 1, 3, 'Corolla XEi', 155000.00, '2024', 20),
@@ -80,8 +53,6 @@ INSERT INTO CARRO (COD_CARRO, COD_COR, COD_MARCA, COD_TIPO, NOME, PRECO, ANO, QT
 (18, 1, 8, 5, 'BMW 320i', 322000.00, '2024', 8),
 (19, 6, 8, 2, 'BMW X1', 350000.00, '2023', 10);
 
--- POVOANDO A TABELA LOJA_CARRO (DISTRIBUINDO CARROS NAS LOJAS)
--- Cada loja terá uma seleção de carros
 INSERT INTO LOJA_CARRO (COD_LOJA_CARRO, COD_LOJA, COD_CARRO) VALUES
 -- Loja 1: Matriz Teresina (Vende de tudo)
 (1, 1, 1), (2, 1, 2), (3, 1, 4), (4, 1, 5), (5, 1, 7), (6, 1, 9), (7, 1, 10), (8, 1, 12), (9, 1, 14), (10, 1, 18), (11, 1, 19),
@@ -92,7 +63,6 @@ INSERT INTO LOJA_CARRO (COD_LOJA_CARRO, COD_LOJA, COD_CARRO) VALUES
 -- Loja 4: Filial Floriano (Misto popular)
 (28, 4, 3), (29, 4, 4), (30, 4, 9), (31, 4, 10), (32, 4, 12), (33, 4, 13), (34, 4, 14);
 
--- POVOANDO A TABELA FUNCIONARIO
 INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MENSAL, QTD_VENDIDA_NO_MES, COD_LOJA) VALUES
 -- Loja 1
 (1, 'Carlos Alberto Silva', '1985-03-15', 4500.00, 500000.00, 0, 1),
@@ -108,7 +78,6 @@ INSERT INTO FUNCIONARIO (COD_FUNCIONARIO, NOME, DT_NASCIMENTO, SALARIO, META_MEN
 (8, 'Francisco das Chagas', '1982-04-18', 4000.00, 410000.00, 0, 4),
 (9, 'Antonia de Sousa', '1991-12-08', 3700.00, 390000.00, 0, 4);
 
--- POVOANDO A TABELA CLIENTE E SEUS TIPOS (PF/PJ)
 INSERT INTO CLIENTE (COD_CLIENTE, NOME, DT_NASCIMENTO, QTD_GASTO) VALUES
 (1, 'Fernanda Moreira Costa', '1990-01-25', 0), (2, 'Lucas Dias Martins', '1988-06-10', 0),
 (3, 'Juliana Pereira Alves', '2000-09-30', 0), (4, 'Marcos Vinicius Barros', '1975-05-14', 0),
@@ -127,8 +96,6 @@ INSERT INTO PESSOA_JURIDICA (COD_CLIENTE, CNPJ) VALUES
 --================================================================================--
 -- 				4. SIMULAÇÃO DE VENDAS
 --================================================================================--
--- As funções e gatilhos irão calcular totais, atualizar estoque, etc.
--- Apenas inserimos os registros de VENDA e ITEM_VENDA.
 
 -- VENDA 1: Cliente 1 compra um Corolla com Vendedor 1 (Loja 1)
 INSERT INTO VENDA (COD_VENDA, COD_FUNCIONARIO, COD_CLIENTE, VALOR_TOTAL, DT_VENDA) VALUES (1, 1, 1, 0, '2024-01-15');

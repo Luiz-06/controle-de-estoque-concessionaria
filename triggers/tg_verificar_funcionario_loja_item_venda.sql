@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION verificar_funcionario_loja_item_venda() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_verificar_funcionario_loja_item_venda() RETURNS TRIGGER AS $$
 DECLARE
 	v_cod_loja_funcionario INT;
 	v_cod_loja_carro INT;
@@ -18,5 +18,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER verificar_funcionario_loja_item_venda_tr BEFORE INSERT OR UPDATE ON ITEM_VENDA
-FOR EACH ROW EXECUTE FUNCTION verificar_funcionario_loja_item_venda();
+CREATE TRIGGER tg_verificar_funcionario_loja_item_venda BEFORE INSERT OR UPDATE ON ITEM_VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
