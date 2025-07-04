@@ -1,5 +1,3 @@
-BEGIN;
-
 SELECT fn_inserir_na_tabela('cor', 'cod_cor, nome', '4, ''AZUL''');
 SELECT * FROM COR
 
@@ -33,6 +31,5 @@ SELECT * FROM fn_historico_compras_cliente(1);
 
 SELECT * FROM fn_listar_funcionarios_abaixo_meta();
 
-ROLLBACK;
 
 

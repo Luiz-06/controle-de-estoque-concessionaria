@@ -1,6 +1,6 @@
 CREATE ROLE cliente;
 
-GRANT CONNECT ON DATABASE teste TO cliente;
+GRANT CONNECT ON DATABASE "nome-do-seu-bd" TO cliente;
 GRANT USAGE ON SCHEMA public TO cliente;
 
 GRANT EXECUTE ON FUNCTION fn_detalhes_venda(integer) TO cliente;

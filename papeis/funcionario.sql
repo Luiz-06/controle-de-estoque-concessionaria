@@ -4,17 +4,17 @@ GRANT CONNECT ON DATABASE "nome_do_seu_bd" TO funcionario;
 GRANT USAGE ON SCHEMA public TO funcionario;
 
 GRANT SELECT ON
-    CARRO,
-    CLIENTE,
-    COR,
-    ITEM_VENDA,
-    LOJA,
-    LOJA_CARRO,
-    MARCA,
-    PESSOA_FISICA,
-    PESSOA_JURIDICA,
-    TIPO,
-    VENDA
+   CARRO,
+   CLIENTE,
+   COR,
+   ITEM_VENDA,
+   LOJA,
+   LOJA_CARRO,
+   MARCA,
+   PESSOA_FISICA,
+   PESSOA_JURIDICA,
+   TIPO,
+   VENDA
 TO funcionario;
 
 GRANT EXECUTE ON FUNCTION fn_realizar_venda(integer, integer) TO funcionario;

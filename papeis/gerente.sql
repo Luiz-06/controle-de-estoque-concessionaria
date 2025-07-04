@@ -20,6 +20,6 @@ BEGIN
    GRANT gerente TO gerente_user;
 END
 $$;
- 
+
 
 
