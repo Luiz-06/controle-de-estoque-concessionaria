@@ -278,58 +278,92 @@ FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
 
 
 --================================================================================--
--- 				3. FUNÇÕES
+-- 				3. FUNÇÕES (VERSÃO FINAL COM TODAS AS CORREÇÕES E MELHORIAS)
 --================================================================================--
 
 ------------------------------------------------------------------------------------
 -- 3.1. FUNÇÕES GENÉRICAS DE MANIPULAÇÃO DE DADOS
 ------------------------------------------------------------------------------------
 
--- DESCRIÇÃO: Insere um registro em uma tabela dinamicamente.
+-- DESCRIÇÃO: Insere um registro em uma tabela dinamicamente, com tratamento de erro amigável.
 CREATE OR REPLACE FUNCTION fn_inserir_na_tabela(nome_tabela TEXT, colunas TEXT, valores TEXT)
-RETURNS VOID AS $$
-DECLARE
-	comando_sql TEXT;
-BEGIN
-	comando_sql := FORMAT('INSERT INTO %I (%s) VALUES (%s)', nome_tabela, colunas, valores);
-	EXECUTE comando_sql;
-	RAISE NOTICE 'Comando executado: %', comando_sql;
-END;
-$$ LANGUAGE plpgsql;
-
--- DESCRIÇÃO: Deleta um registro de uma tabela com base em uma condição, com tratamento de erro.
-CREATE OR REPLACE FUNCTION fn_deletar_da_tabela(p_nome_tabela TEXT, p_condicao TEXT)
-RETURNS VOID AS $$
-DECLARE
-	comando_sql TEXT;
-BEGIN
-	comando_sql := FORMAT('DELETE FROM %I WHERE %s', p_nome_tabela, p_condicao);
-	RAISE NOTICE 'Tentando executar: %', comando_sql;
-	EXECUTE comando_sql;
-	RAISE NOTICE 'Registro(s) removido(s) com sucesso da tabela %s.', p_nome_tabela;
-EXCEPTION
-	WHEN foreign_key_violation THEN
-		RAISE EXCEPTION 'ERRO: Não é possível remover o registro da tabela "%", pois ele está a ser utilizado por outra tabela.', p_nome_tabela;
-END;
-$$ LANGUAGE plpgsql;
-
--- DESCRIÇÃO: Atualiza um ou mais registros em uma tabela com base em uma condição.
-CREATE OR REPLACE FUNCTION fn_atualizar_tabela(p_nome_tabela TEXT, p_atualizacoes TEXT, p_condicao TEXT)
 RETURNS VOID AS $$
 DECLARE
     comando_sql TEXT;
 BEGIN
-    IF p_nome_tabela IS NULL OR p_atualizacoes IS NULL OR p_condicao IS NULL THEN
-        RAISE EXCEPTION 'ERRO: Nome da tabela, atualizações e condição não podem ser nulos.';
-    END IF;
-    comando_sql := FORMAT('UPDATE %I SET %s WHERE %s', p_nome_tabela, p_atualizacoes, p_condicao);
-    RAISE NOTICE 'Executando comando: %', comando_sql;
+    comando_sql := FORMAT('INSERT INTO %I (%s) VALUES (%s)', nome_tabela, colunas, valores);
     EXECUTE comando_sql;
-    IF FOUND THEN
-        RAISE NOTICE 'Registro(s) na tabela %s atualizado(s) com sucesso.', p_nome_tabela;
+    RAISE NOTICE 'SUCESSO: Registro inserido na tabela %I.', nome_tabela;
+EXCEPTION
+    WHEN sqlstate '42P01' THEN -- undefined_table
+        RAISE NOTICE 'AVISO: A tabela "%" não existe no banco de dados.', nome_tabela;
+    WHEN sqlstate '42703' THEN -- undefined_column
+        RAISE NOTICE 'AVISO: Uma ou mais colunas especificadas (%) não existem na tabela "%".', colunas, nome_tabela;
+    WHEN sqlstate '23505' THEN -- unique_violation
+        RAISE NOTICE 'AVISO: Falha ao inserir. Um dos valores já existe e viola uma restrição de chave única (ex: código duplicado).';
+    WHEN sqlstate '22P02' THEN -- invalid_text_representation
+        RAISE NOTICE 'AVISO: Falha ao inserir. O formato de um dos valores é incompatível com o tipo da coluna (ex: texto em um campo de número).';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao tentar inserir na tabela "%". Detalhe: %', nome_tabela, SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+-- DESCRIÇÃO: Deleta um registro de uma tabela com base em uma condição, com tratamento de erro amigável.
+CREATE OR REPLACE FUNCTION fn_deletar_da_tabela(p_nome_tabela TEXT, p_condicao TEXT)
+RETURNS VOID AS $$
+DECLARE
+    comando_sql TEXT;
+    rows_affected INT;
+BEGIN
+    comando_sql := FORMAT('DELETE FROM %I WHERE %s', p_nome_tabela, p_condicao);
+    EXECUTE comando_sql;
+    
+    GET DIAGNOSTICS rows_affected = ROW_COUNT;
+    IF rows_affected > 0 THEN
+        RAISE NOTICE 'SUCESSO: % registro(s) removido(s) da tabela %s.', rows_affected, p_nome_tabela;
     ELSE
-        RAISE NOTICE 'Nenhum registro correspondente à condição foi encontrado na tabela %s.', p_nome_tabela;
+        RAISE NOTICE 'AVISO: Nenhum registro correspondia à condição na tabela %s. Nada foi deletado.', p_nome_tabela;
     END IF;
+EXCEPTION
+    WHEN sqlstate '42P01' THEN -- undefined_table
+        RAISE NOTICE 'AVISO: A tabela "%" não existe no banco de dados.', p_nome_tabela;
+    WHEN foreign_key_violation THEN
+        RAISE NOTICE 'AVISO: Não é possível remover o registro, pois ele está sendo usado por outra tabela.';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao tentar deletar da tabela "%". Detalhe: %', p_nome_tabela, SQLERRM;
+END;
+$$ LANGUAGE plpgsql;
+
+-- DESCRIÇÃO: Atualiza um ou mais registros em uma tabela com base em uma condição, com tratamento de erro amigável.
+CREATE OR REPLACE FUNCTION fn_atualizar_tabela(p_nome_tabela TEXT, p_atualizacoes TEXT, p_condicao TEXT)
+RETURNS VOID AS $$
+DECLARE
+    comando_sql TEXT;
+    rows_affected INT;
+BEGIN
+    IF p_nome_tabela IS NULL OR p_atualizacoes IS NULL OR p_condicao IS NULL THEN
+        RAISE NOTICE 'AVISO: Os parâmetros nome_tabela, atualizacoes e condicao não podem ser nulos.';
+        RETURN;
+    END IF;
+
+    comando_sql := FORMAT('UPDATE %I SET %s WHERE %s', p_nome_tabela, p_atualizacoes, p_condicao);
+    EXECUTE comando_sql;
+
+    GET DIAGNOSTICS rows_affected = ROW_COUNT;
+    IF rows_affected > 0 THEN
+        RAISE NOTICE 'SUCESSO: % registro(s) na tabela %s foram atualizado(s).', rows_affected, p_nome_tabela;
+    ELSE
+        RAISE NOTICE 'AVISO: Nenhum registro correspondente à condição foi encontrado na tabela %s.', p_nome_tabela;
+    END IF;
+EXCEPTION
+    WHEN sqlstate '42P01' THEN -- undefined_table
+        RAISE NOTICE 'AVISO: A tabela "%" não existe no banco de dados.', p_nome_tabela;
+    WHEN sqlstate '42703' THEN -- undefined_column
+        RAISE NOTICE 'AVISO: Uma ou mais colunas na atualização não existem na tabela "%".', p_nome_tabela;
+    WHEN sqlstate '22P02' THEN -- invalid_text_representation
+        RAISE NOTICE 'AVISO: Falha ao atualizar. O formato de um dos valores é incompatível com o tipo da coluna.';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao tentar atualizar a tabela "%". Detalhe: %', p_nome_tabela, SQLERRM;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -337,36 +371,70 @@ $$ LANGUAGE plpgsql;
 -- 3.2. FUNÇÕES DE LÓGICA DE NEGÓCIO (OPERAÇÕES DE VENDA)
 ------------------------------------------------------------------------------------
 
--- DESCRIÇÃO: Cria um novo registro de venda para um cliente e funcionário.
+-- DESCRIÇÃO: Cria um novo registro de venda com validação proativa.
 CREATE OR REPLACE FUNCTION fn_realizar_venda(p_cod_cliente INT, p_cod_funcionario INT)
 RETURNS INT AS $$
 DECLARE
-	v_nova_venda_id INT;
+    v_nova_venda_id INT;
 BEGIN
-	SELECT COALESCE(MAX(COD_VENDA), 0) + 1 INTO v_nova_venda_id FROM VENDA;
-	INSERT INTO VENDA (COD_VENDA, COD_CLIENTE, COD_FUNCIONARIO, VALOR_TOTAL, DT_VENDA)
-	VALUES (v_nova_venda_id, p_cod_cliente, p_cod_funcionario, 0, CURRENT_DATE);
-	RAISE NOTICE 'Venda com código % criada com sucesso. Agora, adicione os itens da venda.', v_nova_venda_id;
-	RETURN v_nova_venda_id;
+    IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
+        RAISE NOTICE 'AVISO: Não foi possível criar a venda. O cliente com código % não existe.', p_cod_cliente;
+        RETURN NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = p_cod_funcionario) THEN
+        RAISE NOTICE 'AVISO: Não foi possível criar a venda. O funcionário com código % não existe.', p_cod_funcionario;
+        RETURN NULL;
+    END IF;
+
+    SELECT COALESCE(MAX(COD_VENDA), 0) + 1 INTO v_nova_venda_id FROM VENDA;
+    INSERT INTO VENDA (COD_VENDA, COD_CLIENTE, COD_FUNCIONARIO, VALOR_TOTAL, DT_VENDA)
+    VALUES (v_nova_venda_id, p_cod_cliente, p_cod_funcionario, 0, CURRENT_DATE);
+    
+    RAISE NOTICE 'SUCESSO: Venda com código % criada para o cliente %.', v_nova_venda_id, p_cod_cliente;
+    RETURN v_nova_venda_id;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao criar a venda. Detalhe: %', SQLERRM;
+        RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- DESCRIÇÃO: Adiciona um item (carro) a uma venda existente, com validações.
+-- DESCRIÇÃO: Adiciona um item a uma venda existente, com validação proativa.
 CREATE OR REPLACE FUNCTION fn_inserir_na_venda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
 RETURNS VOID AS $$
 DECLARE
-	v_novo_item_venda_id INT;
+    v_novo_item_venda_id INT;
+    v_estoque_atual INT;
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda) THEN
-		RAISE EXCEPTION 'ERRO: A venda com o código % não foi encontrada. Impossível adicionar o item.', p_cod_venda;
-	END IF;
-	IF p_qtd_de_itens <= 0 THEN
-		RAISE EXCEPTION 'ERRO: A quantidade de itens para venda (%) deve ser um número positivo maior que zero.', p_qtd_de_itens;
-	END IF;
-	SELECT COALESCE(MAX(COD_ITEM_VENDA), 0) + 1 INTO v_novo_item_venda_id FROM ITEM_VENDA;
-	INSERT INTO ITEM_VENDA (COD_ITEM_VENDA, COD_VENDA, COD_LOJA_CARRO, QTD_DE_ITENS)
-	VALUES (v_novo_item_venda_id, p_cod_venda, p_cod_loja_carro, p_qtd_de_itens);
-	RAISE NOTICE 'Item (COD_LOJA_CARRO: %) adicionado com sucesso à venda de código %.', p_cod_loja_carro, p_cod_venda;
+    IF NOT EXISTS (SELECT 1 FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda) THEN
+        RAISE NOTICE 'AVISO: A venda com o código % não foi encontrada. Impossível adicionar o item.', p_cod_venda;
+        RETURN;
+    END IF;
+
+    IF p_qtd_de_itens <= 0 THEN
+        RAISE NOTICE 'AVISO: A quantidade de itens para venda (%) deve ser um número positivo maior que zero.', p_qtd_de_itens;
+        RETURN;
+    END IF;
+
+    SELECT C.QTD_EM_ESTOQUE INTO v_estoque_atual FROM CARRO C JOIN LOJA_CARRO LC ON C.COD_CARRO = LC.COD_CARRO WHERE LC.COD_LOJA_CARRO = p_cod_loja_carro;
+    IF NOT FOUND THEN
+        RAISE NOTICE 'AVISO: O item de loja/carro com código % não existe.', p_cod_loja_carro;
+        RETURN;
+    END IF;
+
+    IF p_qtd_de_itens > v_estoque_atual THEN
+		RAISE NOTICE 'AVISO: Quantidade solicitada (%) maior que o estoque disponível (%).', p_qtd_de_itens, v_estoque_atual;
+		RETURN;
+    END IF;
+
+    SELECT COALESCE(MAX(COD_ITEM_VENDA), 0) + 1 INTO v_novo_item_venda_id FROM ITEM_VENDA;
+    INSERT INTO ITEM_VENDA (COD_ITEM_VENDA, COD_VENDA, COD_LOJA_CARRO, QTD_DE_ITENS)
+    VALUES (v_novo_item_venda_id, p_cod_venda, p_cod_loja_carro, p_qtd_de_itens);
+    RAISE NOTICE 'SUCESSO: Item (COD_LOJA_CARRO: %) adicionado à venda de código %.', p_cod_loja_carro, p_cod_venda;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao adicionar item à venda. Detalhe: %', SQLERRM;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -377,23 +445,21 @@ $$ LANGUAGE plpgsql;
 -- DESCRIÇÃO: Retorna uma visão completa (recibo) de uma venda específica.
 CREATE OR REPLACE FUNCTION fn_detalhes_venda(p_cod_venda INT)
 RETURNS TABLE (id_da_venda INT, data_venda DATE, valor_total_venda FLOAT, nome_cliente VARCHAR, nome_funcionario VARCHAR, nome_carro VARCHAR, marca_carro VARCHAR, quantidade_itens INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
-DECLARE
-	v_venda_existe INT;
 BEGIN
-	SELECT COUNT(*) INTO v_venda_existe FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda;
-	IF v_venda_existe = 0 THEN
-		RAISE EXCEPTION 'Venda com código % não encontrada.', p_cod_venda;
-	END IF;
-	RETURN QUERY
-	SELECT V.COD_VENDA, V.DT_VENDA, V.VALOR_TOTAL, CL.NOME, F.NOME, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
-	FROM VENDA AS V
-	JOIN CLIENTE AS CL ON V.COD_CLIENTE = CL.COD_CLIENTE
-	JOIN FUNCIONARIO AS F ON V.COD_FUNCIONARIO = F.COD_FUNCIONARIO
-	JOIN ITEM_VENDA AS IV ON V.COD_VENDA = IV.COD_VENDA
-	JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
-	JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO
-	JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
-	WHERE V.COD_VENDA = p_cod_venda;
+    IF NOT EXISTS (SELECT 1 FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda) THEN
+        RAISE NOTICE 'AVISO: Venda com código % não encontrada.', p_cod_venda;
+        RETURN;
+    END IF;
+    RETURN QUERY
+    SELECT V.COD_VENDA, V.DT_VENDA, V.VALOR_TOTAL, CL.NOME, F.NOME, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
+    FROM VENDA AS V
+    JOIN CLIENTE AS CL ON V.COD_CLIENTE = CL.COD_CLIENTE
+    JOIN FUNCIONARIO AS F ON V.COD_FUNCIONARIO = F.COD_FUNCIONARIO
+    JOIN ITEM_VENDA AS IV ON V.COD_VENDA = IV.COD_VENDA
+    JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
+    JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO
+    JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
+    WHERE V.COD_VENDA = p_cod_venda;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -401,11 +467,11 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_cliente_maior_gasto()
 RETURNS TABLE (nome_cliente VARCHAR, total_gasto FLOAT) AS $$
 BEGIN
-	RETURN QUERY
-	SELECT C.NOME, C.QTD_GASTO FROM CLIENTE AS C
-	WHERE C.QTD_GASTO > 0
-	ORDER BY C.QTD_GASTO DESC
-	LIMIT 1;
+    RETURN QUERY
+    SELECT C.NOME, C.QTD_GASTO FROM CLIENTE AS C
+    WHERE C.QTD_GASTO > 0
+    ORDER BY C.QTD_GASTO DESC
+    LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -413,10 +479,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_funcionario_campeao_de_vendas()
 RETURNS TABLE (nome_funcionario VARCHAR, total_vendido_no_mes FLOAT) AS $$
 BEGIN
-	RETURN QUERY
-	SELECT F.NOME, F.QTD_VENDIDA_NO_MES
-	FROM FUNCIONARIO AS F
-	WHERE F.QTD_VENDIDA_NO_MES = (SELECT MAX(QTD_VENDIDA_NO_MES) FROM FUNCIONARIO WHERE QTD_VENDIDA_NO_MES > 0);
+    RETURN QUERY
+    SELECT F.NOME, F.QTD_VENDIDA_NO_MES
+    FROM FUNCIONARIO AS F
+    WHERE F.QTD_VENDIDA_NO_MES = (SELECT MAX(QTD_VENDIDA_NO_MES) FROM FUNCIONARIO WHERE QTD_VENDIDA_NO_MES > 0);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -424,21 +490,23 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_loja_campea_de_vendas(p_mes INT, p_ano INT)
 RETURNS TABLE (nome_loja VARCHAR, total_vendido FLOAT) AS $$
 BEGIN
-	IF p_mes IS NULL OR p_mes NOT BETWEEN 1 AND 12 THEN
-		RAISE EXCEPTION 'Mês inválido. Forneça um valor entre 1 e 12.';
-	END IF;
-	IF p_ano IS NULL OR p_ano < 1900 THEN
-		RAISE EXCEPTION 'Ano inválido. Forneça um ano válido.';
-	END IF;
-	RETURN QUERY
-	SELECT L.NOME, SUM(V.VALOR_TOTAL) AS "Total Vendido"
-	FROM VENDA AS V
-	JOIN FUNCIONARIO AS F ON V.COD_FUNCIONARIO = F.COD_FUNCIONARIO
-	JOIN LOJA AS L ON F.COD_LOJA = L.COD_LOJA
-	WHERE EXTRACT(MONTH FROM V.DT_VENDA) = p_mes AND EXTRACT(YEAR FROM V.DT_VENDA) = p_ano
-	GROUP BY L.NOME
-	ORDER BY "Total Vendido" DESC
-	LIMIT 1;
+    IF p_mes IS NULL OR p_mes NOT BETWEEN 1 AND 12 THEN
+        RAISE NOTICE 'AVISO: Mês inválido. Forneça um valor entre 1 e 12.';
+        RETURN;
+    END IF;
+    IF p_ano IS NULL OR p_ano < 1900 THEN
+        RAISE NOTICE 'AVISO: Ano inválido. Forneça um ano válido.';
+        RETURN;
+    END IF;
+    RETURN QUERY
+    SELECT L.NOME, SUM(V.VALOR_TOTAL) AS "Total Vendido"
+    FROM VENDA AS V
+    JOIN FUNCIONARIO AS F ON V.COD_FUNCIONARIO = F.COD_FUNCIONARIO
+    JOIN LOJA AS L ON F.COD_LOJA = L.COD_LOJA
+    WHERE EXTRACT(MONTH FROM V.DT_VENDA) = p_mes AND EXTRACT(YEAR FROM V.DT_VENDA) = p_ano
+    GROUP BY L.NOME
+    ORDER BY "Total Vendido" DESC
+    LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -474,13 +542,13 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_total_vendido_por_loja()
 RETURNS TABLE (nome_da_loja VARCHAR, valor_total_vendido FLOAT) AS $$
 BEGIN
-	RETURN QUERY
-	SELECT L.NOME, COALESCE(SUM(V.VALOR_TOTAL), 0) AS total_vendido
-	FROM LOJA AS L
-	LEFT JOIN FUNCIONARIO AS F ON L.COD_LOJA = F.COD_LOJA
-	LEFT JOIN VENDA AS V ON F.COD_FUNCIONARIO = V.COD_FUNCIONARIO
-	GROUP BY L.NOME
-	ORDER BY total_vendido DESC;
+    RETURN QUERY
+    SELECT L.NOME, COALESCE(SUM(V.VALOR_TOTAL), 0) AS total_vendido
+    FROM LOJA AS L
+    LEFT JOIN FUNCIONARIO AS F ON L.COD_LOJA = F.COD_LOJA
+    LEFT JOIN VENDA AS V ON F.COD_FUNCIONARIO = V.COD_FUNCIONARIO
+    GROUP BY L.NOME
+    ORDER BY total_vendido DESC;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -488,17 +556,18 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_listar_carros_disponiveis_por_loja(p_cod_loja INT)
 RETURNS TABLE (nome_carro VARCHAR, nome_marca VARCHAR, nome_tipo VARCHAR, nome_cor VARCHAR, ano_carro VARCHAR, preco_carro FLOAT, qtd_em_estoque INT) AS $$
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM LOJA WHERE COD_LOJA = p_cod_loja) THEN
-		RAISE EXCEPTION 'ERRO: A loja com o código % não foi encontrada.', p_cod_loja;
-	END IF;
-	RETURN QUERY
-	SELECT C.NOME, M.NOME, T.NOME, CO.NOME, C.ANO, C.PRECO, C.QTD_EM_ESTOQUE
-	FROM CARRO AS C
-	JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
-	JOIN TIPO AS T ON C.COD_TIPO = T.COD_TIPO
-	JOIN COR AS CO ON C.COD_COR = CO.COD_COR
-	JOIN LOJA_CARRO AS LC ON C.COD_CARRO = LC.COD_CARRO
-	WHERE LC.COD_LOJA = p_cod_loja AND C.QTD_EM_ESTOQUE > 0;
+    IF NOT EXISTS (SELECT 1 FROM LOJA WHERE COD_LOJA = p_cod_loja) THEN
+        RAISE NOTICE 'AVISO: A loja com o código % não foi encontrada.', p_cod_loja;
+        RETURN;
+    END IF;
+    RETURN QUERY
+    SELECT C.NOME, M.NOME, T.NOME, CO.NOME, C.ANO, C.PRECO, C.QTD_EM_ESTOQUE
+    FROM CARRO AS C
+    JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
+    JOIN TIPO AS T ON C.COD_TIPO = T.COD_TIPO
+    JOIN COR AS CO ON C.COD_COR = CO.COD_COR
+    JOIN LOJA_CARRO AS LC ON C.COD_CARRO = LC.COD_CARRO
+    WHERE LC.COD_LOJA = p_cod_loja AND C.QTD_EM_ESTOQUE > 0;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -506,15 +575,16 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_listar_vendas_por_funcionario(p_cod_funcionario INT)
 RETURNS TABLE (id_venda INT, data_da_venda DATE, nome_cliente VARCHAR, valor_total FLOAT) AS $$
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = p_cod_funcionario) THEN
-		RAISE EXCEPTION 'ERRO: O funcionário com o código % não foi encontrado.', p_cod_funcionario;
-	END IF;
-	RETURN QUERY
-	SELECT V.COD_VENDA, V.DT_VENDA, C.NOME, V.VALOR_TOTAL
-	FROM VENDA AS V
-	JOIN CLIENTE AS C ON V.COD_CLIENTE = C.COD_CLIENTE
-	WHERE V.COD_FUNCIONARIO = p_cod_funcionario
-	ORDER BY V.DT_VENDA DESC;
+    IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = p_cod_funcionario) THEN
+        RAISE NOTICE 'AVISO: O funcionário com o código % não foi encontrado.', p_cod_funcionario;
+        RETURN;
+    END IF;
+    RETURN QUERY
+    SELECT V.COD_VENDA, V.DT_VENDA, C.NOME, V.VALOR_TOTAL
+    FROM VENDA AS V
+    JOIN CLIENTE AS C ON V.COD_CLIENTE = C.COD_CLIENTE
+    WHERE V.COD_FUNCIONARIO = p_cod_funcionario
+    ORDER BY V.DT_VENDA DESC;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -522,17 +592,18 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_historico_compras_cliente(p_cod_cliente INT)
 RETURNS TABLE (data_da_compra DATE, id_venda INT, nome_carro VARCHAR, marca_carro VARCHAR, quantidade INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
 BEGIN
-	IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
-		RAISE EXCEPTION 'ERRO: O cliente com o código % não foi encontrado.', p_cod_cliente;
-	END IF;
-	RETURN QUERY
-	SELECT V.DT_VENDA, V.COD_VENDA, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
-	FROM VENDA AS V
-	JOIN ITEM_VENDA AS IV ON V.COD_VENDA = IV.COD_VENDA
-	JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
-	JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO
-	JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
-	WHERE V.COD_CLIENTE = p_cod_cliente
-	ORDER BY V.DT_VENDA DESC, V.COD_VENDA;
+    IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
+        RAISE NOTICE 'AVISO: O cliente com o código % não foi encontrado.', p_cod_cliente;
+        RETURN;
+    END IF;
+    RETURN QUERY
+    SELECT V.DT_VENDA, V.COD_VENDA, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
+    FROM VENDA AS V
+    JOIN ITEM_VENDA AS IV ON V.COD_VENDA = IV.COD_VENDA
+    JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO
+    JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO
+    JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
+    WHERE V.COD_CLIENTE = p_cod_cliente
+    ORDER BY V.DT_VENDA DESC, V.COD_VENDA;
 END;
 $$ LANGUAGE plpgsql;
