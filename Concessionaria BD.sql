@@ -459,6 +459,35 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- FUNÇÃO DE RELATÓRIO DE METAS ABAIXO
+CREATE OR REPLACE FUNCTION fn_listar_funcionarios_abaixo_meta()
+RETURNS TABLE (
+    nome_funcionario VARCHAR,
+    nome_loja VARCHAR,
+    total_vendido FLOAT,
+    meta_mensal FLOAT,
+    valor_restante_para_meta FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        F.NOME,
+        L.NOME,
+        F.QTD_VENDIDA_NO_MES,
+        F.META_MENSAL,
+        (F.META_MENSAL - F.QTD_VENDIDA_NO_MES)::FLOAT AS valor_restante
+    FROM
+        FUNCIONARIO AS F
+    JOIN
+        LOJA AS L ON F.COD_LOJA = L.COD_LOJA
+    WHERE
+        F.QTD_VENDIDA_NO_MES < F.META_MENSAL
+    ORDER BY
+        valor_restante DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+
 -- DESCRIÇÃO: Calcula e lista o total vendido por TODAS as lojas, mostrando 0 para aquelas que não tiveram vendas.
 CREATE OR REPLACE FUNCTION fn_total_vendido_por_loja()
 RETURNS TABLE (nome_da_loja VARCHAR, valor_total_vendido FLOAT) AS $$

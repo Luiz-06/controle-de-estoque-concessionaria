@@ -33,4 +33,8 @@ SELECT * FROM fn_listar_vendas_por_funcionario(1);
 
 SELECT * FROM fn_historico_compras_cliente(1);
 
+SELECT * FROM fn_listar_funcionarios_abaixo_meta();
+
 ROLLBACK;
+
+
