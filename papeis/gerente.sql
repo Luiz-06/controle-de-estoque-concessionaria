@@ -1,6 +1,6 @@
 CREATE ROLE gerente;
 
-GRANT CONNECT ON DATABASE teste TO gerente; 
+GRANT CONNECT ON DATABASE "nome_do_seu_bd" TO gerente; 
 GRANT USAGE ON SCHEMA public TO gerente;
 
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO gerente;
