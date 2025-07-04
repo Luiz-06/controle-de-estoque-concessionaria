@@ -7,7 +7,7 @@
 
 
 --================================================================================--
--- 				1. CRIAÇÃO DAS TABELAS 
+-- 				1. CRIAÇÃO DAS TABELAS
 --================================================================================--
 
 CREATE TABLE COR (
@@ -124,11 +124,11 @@ INSERT INTO PESSOA_JURIDICA (COD_CLIENTE, CNPJ) VALUES (4, '11222333000144'), (5
 
 
 --================================================================================--
--- 				3. GATILHOS (TRIGGERS)
+-- 				3. GATILHOS (TRIGGERS) E SUAS FUNÇÕES
 --================================================================================--
 
 -- 3.1. Gatilho para calcular o total da venda e atualizar o estoque
-CREATE OR REPLACE FUNCTION total_da_venda() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_total_da_venda() RETURNS TRIGGER AS $$
 BEGIN
 	IF TG_OP = 'INSERT' THEN
 		UPDATE VENDA SET VALOR_TOTAL = (SELECT COALESCE(SUM(IV.QTD_DE_ITENS * C.PRECO), 0) FROM ITEM_VENDA AS IV JOIN LOJA_CARRO AS LC ON IV.COD_LOJA_CARRO = LC.COD_LOJA_CARRO JOIN CARRO AS C ON LC.COD_CARRO = C.COD_CARRO WHERE IV.COD_VENDA = NEW.COD_VENDA) WHERE COD_VENDA = NEW.COD_VENDA;
@@ -145,11 +145,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER total_da_venda_tr AFTER INSERT OR UPDATE OR DELETE ON ITEM_VENDA
-FOR EACH ROW EXECUTE FUNCTION total_da_venda();
+CREATE TRIGGER tg_total_da_venda AFTER INSERT OR UPDATE OR DELETE ON ITEM_VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_total_da_venda();
 
 -- 3.2. Gatilho para validar a existência do funcionário e do cliente na venda
-CREATE OR REPLACE FUNCTION validar_funcionario_cliente() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_validar_funcionario_cliente() RETURNS TRIGGER AS $$
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM FUNCIONARIO WHERE COD_FUNCIONARIO = NEW.COD_FUNCIONARIO) THEN
 		RAISE EXCEPTION 'Funcionário com código % não existe.', NEW.COD_FUNCIONARIO;
@@ -161,11 +161,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER validar_funcionario_cliente_tr BEFORE INSERT OR UPDATE ON VENDA
-FOR EACH ROW EXECUTE FUNCTION validar_funcionario_cliente();
+CREATE TRIGGER tg_validar_funcionario_cliente BEFORE INSERT OR UPDATE ON VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_validar_funcionario_cliente();
 
 -- 3.3. Gatilho para validar se a quantidade vendida não é maior que o estoque
-CREATE OR REPLACE FUNCTION validar_qtd() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_validar_qtd() RETURNS TRIGGER AS $$
 DECLARE
 	qtd_presente_no_estoque INT;
 BEGIN
@@ -177,8 +177,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER validar_qtd_tr BEFORE INSERT OR UPDATE ON ITEM_VENDA
-FOR EACH ROW EXECUTE FUNCTION validar_qtd();
+CREATE TRIGGER tg_validar_qtd BEFORE INSERT OR UPDATE ON ITEM_VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_validar_qtd();
 
 -- 3.4. Gatilho para impedir o registro de vendas com data futura
 CREATE OR REPLACE FUNCTION fn_impede_venda_futura() RETURNS TRIGGER AS $$
@@ -251,7 +251,7 @@ CREATE TRIGGER tg_atualiza_gasto_cliente AFTER INSERT OR UPDATE OR DELETE ON VEN
 FOR EACH ROW EXECUTE FUNCTION fn_atualiza_gasto_cliente();
 
 -- 3.8. Gatilho para emitir um aviso quando o funcionário atinge a meta mensal
-CREATE OR REPLACE FUNCTION checa_meta() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_checa_meta() RETURNS TRIGGER AS $$
 DECLARE
 	total FLOAT;
 	meta FLOAT;
@@ -264,11 +264,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_checa_meta BEFORE INSERT OR UPDATE ON VENDA
-FOR EACH ROW EXECUTE FUNCTION checa_meta();
+CREATE TRIGGER tg_checa_meta BEFORE INSERT OR UPDATE ON VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_checa_meta();
 
 -- 3.9. Gatilho para garantir que um funcionário só venda carros da sua própria loja
-CREATE OR REPLACE FUNCTION verificar_funcionario_loja_item_venda() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION fn_verificar_funcionario_loja_item_venda() RETURNS TRIGGER AS $$
 DECLARE
 	v_cod_loja_funcionario INT;
 	v_cod_loja_carro INT;
@@ -288,8 +288,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER verificar_funcionario_loja_item_venda_tr BEFORE INSERT OR UPDATE ON ITEM_VENDA
-FOR EACH ROW EXECUTE FUNCTION verificar_funcionario_loja_item_venda();
+CREATE TRIGGER tg_verificar_funcionario_loja_item_venda BEFORE INSERT OR UPDATE ON ITEM_VENDA
+FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
 
 
 --================================================================================--
@@ -301,19 +301,19 @@ FOR EACH ROW EXECUTE FUNCTION verificar_funcionario_loja_item_venda();
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Insere um registro em uma tabela dinamicamente.
-CREATE OR REPLACE FUNCTION inserir_na_tabela(nome_tabela TEXT, colunas TEXT, valores TEXT)
+CREATE OR REPLACE FUNCTION fn_inserir_na_tabela(nome_tabela TEXT, colunas TEXT, valores TEXT)
 RETURNS VOID AS $$
 DECLARE
 	comando_sql TEXT;
 BEGIN
-	comando_sql := FORMAT('INSERT INTO %s (%s) VALUES (%s)', nome_tabela, colunas, valores);
+	comando_sql := FORMAT('INSERT INTO %I (%s) VALUES (%s)', nome_tabela, colunas, valores);
 	EXECUTE comando_sql;
 	RAISE NOTICE 'Comando executado: %', comando_sql;
 END;
 $$ LANGUAGE plpgsql;
 
 -- DESCRIÇÃO: Deleta um registro de uma tabela com base em uma condição, com tratamento de erro.
-CREATE OR REPLACE FUNCTION deletar_da_tabela(p_nome_tabela TEXT, p_condicao TEXT)
+CREATE OR REPLACE FUNCTION fn_deletar_da_tabela(p_nome_tabela TEXT, p_condicao TEXT)
 RETURNS VOID AS $$
 DECLARE
 	comando_sql TEXT;
@@ -321,28 +321,30 @@ BEGIN
 	comando_sql := FORMAT('DELETE FROM %I WHERE %s', p_nome_tabela, p_condicao);
 	RAISE NOTICE 'Tentando executar: %', comando_sql;
 	EXECUTE comando_sql;
-	RAISE NOTICE 'Registo(s) removido(s) com sucesso da tabela %s.', p_nome_tabela;
+	RAISE NOTICE 'Registro(s) removido(s) com sucesso da tabela %s.', p_nome_tabela;
 EXCEPTION
 	WHEN foreign_key_violation THEN
-		RAISE EXCEPTION 'ERRO: Não é possível remover o registo da tabela "%", pois ele está a ser utilizado por outra tabela.', p_nome_tabela;
+		RAISE EXCEPTION 'ERRO: Não é possível remover o registro da tabela "%", pois ele está a ser utilizado por outra tabela.', p_nome_tabela;
 END;
 $$ LANGUAGE plpgsql;
 
--- DESCRIÇÃO: Altera o preço de um carro, com validações. Exemplo de função de UPDATE.
-CREATE OR REPLACE FUNCTION fn_atualizar_preco_carro(p_cod_carro INT, p_novo_preco FLOAT)
+-- DESCRIÇÃO: Atualiza um ou mais registros em uma tabela com base em uma condição.
+CREATE OR REPLACE FUNCTION fn_atualizar_tabela(p_nome_tabela TEXT, p_atualizacoes TEXT, p_condicao TEXT)
 RETURNS VOID AS $$
 DECLARE
-	v_carro_existe INT;
+    comando_sql TEXT;
 BEGIN
-	IF p_novo_preco <= 0 THEN
-		RAISE EXCEPTION 'O novo preço (R$ %.2f) deve ser um valor positivo.', p_novo_preco;
-	END IF;
-	SELECT COUNT(*) INTO v_carro_existe FROM CARRO WHERE COD_CARRO = p_cod_carro;
-	IF v_carro_existe = 0 THEN
-		RAISE EXCEPTION 'O carro com código % não foi encontrado.', p_cod_carro;
-	END IF;
-	UPDATE CARRO SET PRECO = p_novo_preco WHERE COD_CARRO = p_cod_carro;
-	RAISE NOTICE 'Preço do carro % atualizado para R$ %.2f com sucesso.', p_cod_carro, p_novo_preco;
+    IF p_nome_tabela IS NULL OR p_atualizacoes IS NULL OR p_condicao IS NULL THEN
+        RAISE EXCEPTION 'ERRO: Nome da tabela, atualizações e condição não podem ser nulos.';
+    END IF;
+    comando_sql := FORMAT('UPDATE %I SET %s WHERE %s', p_nome_tabela, p_atualizacoes, p_condicao);
+    RAISE NOTICE 'Executando comando: %', comando_sql;
+    EXECUTE comando_sql;
+    IF FOUND THEN
+        RAISE NOTICE 'Registro(s) na tabela %s atualizado(s) com sucesso.', p_nome_tabela;
+    ELSE
+        RAISE NOTICE 'Nenhum registro correspondente à condição foi encontrado na tabela %s.', p_nome_tabela;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -352,7 +354,7 @@ $$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Cria um novo registro de venda para um cliente e funcionário.
-CREATE OR REPLACE FUNCTION realizarVenda(p_cod_cliente INT, p_cod_funcionario INT)
+CREATE OR REPLACE FUNCTION fn_realizar_venda(p_cod_cliente INT, p_cod_funcionario INT)
 RETURNS INT AS $$
 DECLARE
 	v_nova_venda_id INT;
@@ -366,7 +368,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- DESCRIÇÃO: Adiciona um item (carro) a uma venda existente, com validações.
-CREATE OR REPLACE FUNCTION inserirNaVenda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
+CREATE OR REPLACE FUNCTION fn_inserir_na_venda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
 RETURNS VOID AS $$
 DECLARE
 	v_novo_item_venda_id INT;
@@ -390,7 +392,7 @@ $$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------------------
 
 -- DESCRIÇÃO: Retorna uma visão completa (recibo) de uma venda específica.
-CREATE OR REPLACE FUNCTION detalhes_venda(p_cod_venda INT)
+CREATE OR REPLACE FUNCTION fn_detalhes_venda(p_cod_venda INT)
 RETURNS TABLE (id_da_venda INT, data_venda DATE, valor_total_venda FLOAT, nome_cliente VARCHAR, nome_funcionario VARCHAR, nome_carro VARCHAR, marca_carro VARCHAR, quantidade_itens INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
 DECLARE
 	v_venda_existe INT;
@@ -413,7 +415,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- DESCRIÇÃO: Retorna o cliente que mais gastou na concessionária.
-CREATE OR REPLACE FUNCTION cliente_maior_gasto()
+CREATE OR REPLACE FUNCTION fn_cliente_maior_gasto()
 RETURNS TABLE (nome_cliente VARCHAR, total_gasto FLOAT) AS $$
 BEGIN
 	RETURN QUERY
@@ -523,4 +525,3 @@ BEGIN
 	ORDER BY V.DT_VENDA DESC, V.COD_VENDA;
 END;
 $$ LANGUAGE plpgsql;
-
