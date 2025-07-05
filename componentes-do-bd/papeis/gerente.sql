@@ -16,10 +16,11 @@ BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'gerente_user') THEN
       CREATE USER gerente_user WITH LOGIN PASSWORD 'gerente123';
    END IF;
-   
-   GRANT gerente TO gerente_user;
 END
 $$;
+
+GRANT gerente TO gerente_user;
+
 
 
 
