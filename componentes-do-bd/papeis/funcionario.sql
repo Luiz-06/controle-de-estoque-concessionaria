@@ -27,3 +27,5 @@ BEGIN
    END IF;
 END
 $$;
+
+GRANT funcionario TO funcionario_user;
