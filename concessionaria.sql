@@ -267,16 +267,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_verificar_funcionario_loja_item_venda BEFORE INSERT OR UPDATE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
 
-
-
-
-
-
-
-
-
-
-
 --================================================================================--
 -- 				3. FUNÇÕES (VERSÃO FINAL COM TODAS AS CORREÇÕES E MELHORIAS)
 --================================================================================--
@@ -373,7 +363,10 @@ $$ LANGUAGE plpgsql;
 
 -- DESCRIÇÃO: Cria um novo registro de venda com validação proativa.
 CREATE OR REPLACE FUNCTION fn_realizar_venda(p_cod_cliente INT, p_cod_funcionario INT)
-RETURNS INT AS $$
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
     v_nova_venda_id INT;
 BEGIN
@@ -398,11 +391,14 @@ EXCEPTION
         RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao criar a venda. Detalhe: %', SQLERRM;
         RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- DESCRIÇÃO: Adiciona um item a uma venda existente, com validação proativa.
 CREATE OR REPLACE FUNCTION fn_inserir_na_venda(p_cod_venda INT, p_cod_loja_carro INT, p_qtd_de_itens INT)
-RETURNS VOID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
     v_novo_item_venda_id INT;
     v_estoque_atual INT;
@@ -436,7 +432,8 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE NOTICE 'AVISO: Ocorreu um erro inesperado ao adicionar item à venda. Detalhe: %', SQLERRM;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
 
 ------------------------------------------------------------------------------------
 -- 3.3. FUNÇÕES DE CONSULTA E RELATÓRIO
@@ -444,12 +441,17 @@ $$ LANGUAGE plpgsql;
 
 -- DESCRIÇÃO: Retorna uma visão completa (recibo) de uma venda específica.
 CREATE OR REPLACE FUNCTION fn_detalhes_venda(p_cod_venda INT)
-RETURNS TABLE (id_da_venda INT, data_venda DATE, valor_total_venda FLOAT, nome_cliente VARCHAR, nome_funcionario VARCHAR, nome_carro VARCHAR, marca_carro VARCHAR, quantidade_itens INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
+RETURNS TABLE (id_da_venda INT, data_venda DATE, valor_total_venda FLOAT, nome_cliente VARCHAR, nome_funcionario VARCHAR, nome_carro VARCHAR, marca_carro VARCHAR, quantidade_itens INT, preco_unitario FLOAT, subtotal FLOAT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
+    -- Verificação para garantir que a venda existe antes de tentar consultá-la.
     IF NOT EXISTS (SELECT 1 FROM VENDA WHERE VENDA.COD_VENDA = p_cod_venda) THEN
         RAISE NOTICE 'AVISO: Venda com código % não encontrada.', p_cod_venda;
         RETURN;
     END IF;
+
     RETURN QUERY
     SELECT V.COD_VENDA, V.DT_VENDA, V.VALOR_TOTAL, CL.NOME, F.NOME, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
     FROM VENDA AS V
@@ -461,7 +463,7 @@ BEGIN
     JOIN MARCA AS M ON C.COD_MARCA = M.COD_MARCA
     WHERE V.COD_VENDA = p_cod_venda;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- DESCRIÇÃO: Retorna o cliente que mais gastou na concessionária.
 CREATE OR REPLACE FUNCTION fn_cliente_maior_gasto()
@@ -588,14 +590,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- DESCRIÇÃO: Lista o histórico completo de compras de um cliente.
 CREATE OR REPLACE FUNCTION fn_historico_compras_cliente(p_cod_cliente INT)
-RETURNS TABLE (data_da_compra DATE, id_venda INT, nome_carro VARCHAR, marca_carro VARCHAR, quantidade INT, preco_unitario FLOAT, subtotal FLOAT) AS $$
+RETURNS TABLE (data_da_compra DATE, id_venda INT, nome_carro VARCHAR, marca_carro VARCHAR, quantidade INT, preco_unitario FLOAT, subtotal FLOAT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
+    -- Esta verificação interna é importante para dar feedback claro ao usuário.
     IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
         RAISE NOTICE 'AVISO: O cliente com o código % não foi encontrado.', p_cod_cliente;
         RETURN;
     END IF;
+
+    -- O RETURN QUERY executa a consulta com as permissões do dono da função.
     RETURN QUERY
     SELECT V.DT_VENDA, V.COD_VENDA, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
     FROM VENDA AS V
@@ -606,4 +613,4 @@ BEGIN
     WHERE V.COD_CLIENTE = p_cod_cliente
     ORDER BY V.DT_VENDA DESC, V.COD_VENDA;
 END;
-$$ LANGUAGE plpgsql;
+$$;
