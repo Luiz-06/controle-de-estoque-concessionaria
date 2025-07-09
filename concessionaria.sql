@@ -267,8 +267,18 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_verificar_funcionario_loja_item_venda BEFORE INSERT OR UPDATE ON ITEM_VENDA
 FOR EACH ROW EXECUTE FUNCTION fn_verificar_funcionario_loja_item_venda();
 
+
+
+
+
+
+
+
+
+
+
 --================================================================================--
--- 				3. FUNÇÕES (VERSÃO FINAL COM TODAS AS CORREÇÕES E MELHORIAS)
+-- 				3. FUNÇÕES 
 --================================================================================--
 
 ------------------------------------------------------------------------------------
@@ -596,13 +606,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-    -- Esta verificação interna é importante para dar feedback claro ao usuário.
     IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE COD_CLIENTE = p_cod_cliente) THEN
         RAISE NOTICE 'AVISO: O cliente com o código % não foi encontrado.', p_cod_cliente;
         RETURN;
     END IF;
 
-    -- O RETURN QUERY executa a consulta com as permissões do dono da função.
     RETURN QUERY
     SELECT V.DT_VENDA, V.COD_VENDA, C.NOME, M.NOME, IV.QTD_DE_ITENS, C.PRECO, (IV.QTD_DE_ITENS * C.PRECO)::FLOAT
     FROM VENDA AS V
