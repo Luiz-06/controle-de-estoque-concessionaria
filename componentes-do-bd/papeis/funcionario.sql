@@ -9,7 +9,7 @@ BEGIN
 END
 $$;
 
-GRANT CONNECT ON DATABASE "concessionaria" TO funcionario; 
+GRANT CONNECT ON DATABASE "nome_do_seu_bd" TO funcionario; 
 GRANT USAGE ON SCHEMA public TO funcionario;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM funcionario;

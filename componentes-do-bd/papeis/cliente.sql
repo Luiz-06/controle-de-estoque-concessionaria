@@ -1,4 +1,3 @@
-
 DO $$
 BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'cliente') THEN
@@ -10,7 +9,7 @@ BEGIN
 END
 $$;
 
-GRANT CONNECT ON DATABASE "concessionaria" TO cliente; 
+GRANT CONNECT ON DATABASE "nome_do_seu_bd" TO cliente; 
 GRANT USAGE ON SCHEMA public TO cliente;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM cliente;
@@ -26,10 +25,7 @@ BEGIN
    ELSE
       RAISE NOTICE 'Usuário "cliente_user" já existe.';
    END IF;
-END
+END;
+$$; 
 
 GRANT cliente TO cliente_user;
-
-
-
-
